@@ -1,3 +1,4 @@
-# hello_world
-first try
-Hope I can finish the project1！
+Content:
+Player(walk, bomb, pick tools)
+Bomb(waiting for 3s, show for 1s)
+Robot(walk, bomb)
