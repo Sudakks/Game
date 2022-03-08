@@ -10,14 +10,14 @@ class Player;
 class BOMB;
 class ROBOT;
 using namespace std;
-#define row 17//0和16是墙，0和20是墙`
-#define col 21//地图的尺寸
-#define H_WALL 70//表示中间的硬墙数量
-#define S_WALL 80//表示中间软墙的个数
+#define row 22//0和16是墙，0和20是墙`
+#define col 34//地图的尺寸
+#define H_WALL 110//表示中间的硬墙数量
+#define S_WALL 145//表示中间软墙的个数
 #define Bomb_Wall 2//炸软墙2分
 #define Bomb_Robot 7
 #define Bomb_player 10
-const long long ONE_SECOND = 10000000;
+const long long ONE_SECOND = 6000;
 enum director
 {
 	UP,
@@ -27,6 +27,7 @@ enum director
 };
 void display();
 //
+int px1, py1, px2, py2;//这个每次储存的是player1和2当时炸弹爆炸的位置，这样爆炸的位置就不随着人的移动而移动
 class MAP
 {
 public:
@@ -41,7 +42,7 @@ public:
 		return MYmap[x][y];
 	}
 private:
-	char MYmap[17][21];
+	char MYmap[22][34];
 };
 MAP map;//申明一个地图对象
 void MAP::show_MYmap()
@@ -77,7 +78,7 @@ void MAP::init_MYmap()
 	{
 		int r = rand() % row;
 		int c = rand() % col;
-		if (MYmap[r][c] == ' ')
+		if ( MYmap[r][c] == ' ')
 		{
 			MYmap[r][c] = '#';
 			i++;
@@ -96,29 +97,6 @@ void MAP::init_MYmap()
 	}
 }
 //
-class Bomb
-{
-private:
-	long long wait_time = 0;//玩家炸弹的爆炸时间
-	long long bomb_time = 0;//表示玩家没有投放炸弹
-public:
-	int get_wait_time()
-	{
-		return this->wait_time;
-	}
-	int get_bomb_time()
-	{
-		return this->bomb_time;
-	}
-	void change_bomb_time(long long x)
-	{
-		this->bomb_time += x;
-	}
-	void change_wait_time(long long x)
-	{
-		this->wait_time += x;//当等待时间为0时，设置爆炸时间
-	}
-};
 class Player
 {
 private:
@@ -127,7 +105,9 @@ private:
 	int bomb_range = 1;
 	int score = 0;//玩家得分
 	bool alive = 1;//以及判断游戏是否结束
-	int speed = 1;
+	int speed = 1;//玩家的行走速度
+	long long wait_time = 0;//玩家炸弹的爆炸时间
+	long long bomb_time = 0;//表示玩家没有投放炸弹
 public:
 	void init_Player(char character);//初始化位置及玩家符号
 	void update_location(int type, int speed);//更新位置
@@ -168,6 +148,22 @@ public:
 	{
 		this->speed = x;
 	}
+	long long get_wait_time()
+	{
+		return this->wait_time;
+	}
+	long long get_bomb_time()
+	{
+		return this->bomb_time;
+	}
+	void change_bomb_time(long long x)
+	{
+		this->bomb_time += x;
+	}
+	void change_wait_time(long long x)
+	{
+		this->wait_time += x;//当等待时间为0时，设置爆炸时间
+	}
 };
 Player player1;
 Player player2;//双玩家
@@ -178,7 +174,7 @@ void Player::init_Player(char character)
 	{
 		this->location.first = (rand() % row);
 		this->location.second = (rand() % col);
-		if (map.get_MYmap(this->location.first, this->location.second) == ' ')
+		if (map.get_MYmap(this->location.first,this->location.second) == ' ')
 		{
 			map.change_MYmap(character, this->location.first, this->location.second);
 			break;
@@ -195,24 +191,23 @@ void Player::update_location(int type, int speed)
 	switch (type)
 	{
 	case UP:
-		this->location.first -= speed;
+		this->location.first-=speed;
 		break;
 	case LEFT:
-		this->location.second -= speed;
+		this->location.second-=speed;
 		break;
 	case DOWN:
-		this->location.first += speed;
+		this->location.first+=speed;
 		break;
 	case RIGHT:
-		this->location.second += speed;
+		this->location.second+=speed;
 		break;
 	default:
 		break;
 	}
 }
-
-//这里是模拟炸弹爆炸的过程
-//包括产生光束，然后一秒钟恢复，判断有没有东西要被消除
+	//这里是模拟炸弹爆炸的过程
+	//包括产生光束，然后一秒钟恢复，判断有没有东西要被消除
 void process_of_explode(int x, int y, int range, int type)
 {
 	//相应的加分和处理游戏是否已经结束
@@ -234,16 +229,16 @@ void process_of_explode(int x, int y, int range, int type)
 						player1.change_speed(2);
 					if (ran == 4)//此时获得炸弹威力增强
 						player1.change_bomb_range(2);
-				}
+				}				
 				else if (now == '+')
 				{
 					player1.change_score(Bomb_player);
 					player2.change_alive(0);
 				}
-				else if (now <= '9' && now >= '1')
+				else if(now <= '9'&& now >= '1')
 					player1.change_score(Bomb_Robot);
 			}
-			else if (ord == '+')
+			else if(ord == '+')
 			{
 				//玩家2的操作
 				if (now == '*')
@@ -253,7 +248,7 @@ void process_of_explode(int x, int y, int range, int type)
 						player2.change_speed(2);
 					if (ran == 4)//此时获得炸弹威力增强
 						player2.change_bomb_range(2);
-				}
+				}				
 				else if (now == '@')
 				{
 					player2.change_score(Bomb_player);
@@ -281,7 +276,7 @@ void process_of_explode(int x, int y, int range, int type)
 						player1.change_speed(2);
 					if (ran == 4)//此时获得炸弹威力增强
 						player1.change_bomb_range(2);
-				}
+				}				
 				else if (now == '+')
 				{
 					player1.change_score(Bomb_player);
@@ -300,7 +295,7 @@ void process_of_explode(int x, int y, int range, int type)
 						player2.change_speed(2);
 					if (ran == 4)//此时获得炸弹威力增强
 						player2.change_bomb_range(2);
-				}
+				}				
 				else if (now == '@')
 				{
 					player2.change_score(Bomb_player);
@@ -322,11 +317,7 @@ void process_of_show(int x, int y, int range)
 	{
 		for (int j = y - range; j <= y + range; j++)
 		{
-			if (i == x && j == y)
-			{
-				map.change_MYmap(ord, x, y);
-			}
-			else if (map.get_MYmap(i, j) == 'O')
+			if (map.get_MYmap(i, j) == 'O')
 			{
 				map.change_MYmap(' ', i, j);
 			}
@@ -380,7 +371,7 @@ void ROBOT::walk()
 		int direct = rand() % 4;
 		if (direct == UP && map.get_MYmap(x - 1, y) == ' ')
 		{
-			this->location.first--;
+			this->location.first--;			
 			x--;
 			map.change_MYmap(character, x, y);
 			display();
@@ -443,7 +434,7 @@ void show_scores()
 			winner = alive1 == 1 ? 1 : 2;//其中一个人over了，剩下来的为winner
 		}
 		printf("Game Over!\n");
-		printf("胜利者为玩家%d,祝贺!!!", winner);
+		printf("胜利者为玩家%d,祝贺!!!", winner);	
 	}
 }
 void display()
@@ -466,25 +457,25 @@ void deal_with_input()
 		switch (ch)
 		{
 		case 'w':
-			if (map.get_MYmap(Px1 - 1, Py1) == ' ')//判断要走的位置是否为空
+			if (map.get_MYmap(Px1-1, Py1) == ' ')//判断要走的位置是否为空
 			{
-				map.change_MYmap(' ', Px1, Py1);//将现在的位置变为空
+				map.change_MYmap(' ',Px1, Py1);//将现在的位置变为空
 				player1.update_location(UP, player1.get_speed());//更改玩家的位置
 				map.change_MYmap(player1.get_symbol(), Px1 - 1, Py1);//显示玩家现在的位置
 				display();
 			}
 			break;
 		case 'a':
-			if (map.get_MYmap(Px1, Py1 - 1) == ' ')
+			if (map.get_MYmap(Px1, Py1-1) == ' ')
 			{
 				map.change_MYmap(' ', Px1, Py1);
 				player1.update_location(LEFT, player1.get_speed());
-				map.change_MYmap(player1.get_symbol(), Px1, Py1 - 1);
+				map.change_MYmap(player1.get_symbol(), Px1, Py1-1);
 				display();
 			}
 			break;
 		case 's':
-			if (map.get_MYmap(Px1 + 1, Py1) == ' ')
+			if (map.get_MYmap(Px1+1, Py1) == ' ')
 			{
 				map.change_MYmap(' ', Px1, Py1);
 				player1.update_location(DOWN, player1.get_speed());
@@ -493,56 +484,58 @@ void deal_with_input()
 			}
 			break;
 		case 'd':
-			if (map.get_MYmap(Px1, Py1 + 1) == ' ')
+			if (map.get_MYmap(Px1, Py1+1) == ' ')
 			{
 				map.change_MYmap(' ', Px1, Py1);
 				player1.update_location(RIGHT, player1.get_speed());
 				map.change_MYmap(player1.get_symbol(), Px1, Py1 + 1);
 				display();
 			}
-			break;
+				break;
 		case 'i':
-			if (map.get_MYmap(Px2 - 1, Py2) == ' ')
+			if (map.get_MYmap(Px2-1, Py2) == ' ')
 			{
-				map.change_MYmap(' ', Px2, Py2);
+				map.change_MYmap(' ',Px2, Py2);
 				player2.update_location(UP, player2.get_speed());
-				map.change_MYmap(player2.get_symbol(), Px2 - 1, Py2);
+				map.change_MYmap(player2.get_symbol(), Px2 - 1, Py2);				
 				display();
 			}
-			break;
+				break;
 		case 'k':
-			if (map.get_MYmap(Px2 + 1, Py2) == ' ')
+			if (map.get_MYmap(Px2+1,Py2) == ' ')
 			{
 				map.change_MYmap(' ', Px2, Py2);
 				player2.update_location(DOWN, player2.get_speed());
 				map.change_MYmap(player2.get_symbol(), Px2 + 1, Py2);
 				display();
 			}
-			break;
+				break;
 		case 'j':
-			if (map.get_MYmap(Px2, Py2 - 1) == ' ')
+			if (map.get_MYmap(Px2, Py2-1) == ' ')
 			{
-				map.change_MYmap(' ', Px2, Py2);
+				map.change_MYmap(' ',Px2, Py2);
 				player2.update_location(LEFT, player2.get_speed());
-				map.change_MYmap(player2.get_symbol(), Px2, Py2 - 1);
+				map.change_MYmap(player2.get_symbol(), Px2, Py2 - 1);			
 				display();
 			}
-			break;
+				break;
 		case 'l':
-			if (map.get_MYmap(Px2, Py2 + 1) == ' ')
+			if (map.get_MYmap(Px2,Py2+1) == ' ')
 			{
 				map.change_MYmap(' ', Px2, Py2);
 				player2.update_location(RIGHT, player2.get_speed());
 				map.change_MYmap(player2.get_symbol(), Px2, Py2 + 1);
 				display();
 			}
-			break;
+				break;
 		case ' ':
-			//此时释放了炸弹，然后过3000ms才会爆炸
-			//player1.change_wait_time(3 * ONE_SECOND);
+			//此时释放了炸弹，然后过3000ms才会爆炸，设定了炸弹爆炸的时间
+			player1.change_wait_time(3 * ONE_SECOND);
+			px1 = Px1, py1 = Py1;
 			break;
 		case 13:
-			//player2.change_wait_time(3 * ONE_SECOND);//这里是放炸弹的过程
+			player2.change_wait_time(3 * ONE_SECOND);
+			px2 = Px2, py2 = Py2;
 			break;
 		default:
 			break;
@@ -552,30 +545,29 @@ void deal_with_input()
 void deal_with_timer()
 {
 	//定时事件：炸弹定时3s爆炸，光束显示1s
-	/*if (player1.get_bomb_time())
+	if (player1.get_bomb_time())
 	{
 		player1.change_bomb_time(-1 * ONE_SECOND);
 		if (player1.get_bomb_time() == 0)//说明此时要爆炸了
 		{
-			process_of_explode(player1.get_location().first, player1.get_location().second, player1.get_bomb_rang(), 1);
-			player1.change_bomb_time(1 * ONE_SECOND);
+			process_of_show(px1, py1, player1.get_bomb_rang());
 		}
 	}
 	if (player2.get_bomb_time())
 	{
 		player2.change_bomb_time(-1 * ONE_SECOND);
 		if (player2.get_bomb_time() == 0)
-		{
-			process_of_explode(player2.get_location().first, player2.get_location().second, player2.get_bomb_rang(), 2);
-			player2.change_bomb_time(1 * ONE_SECOND);
+		{		
+			process_of_show(px2, py2, player2.get_bomb_rang());
 		}
 	}
 	if (player1.get_wait_time())
 	{
-		player1.change_wait_time(-1 * ONE_SECOND);
+		player1.change_wait_time(-1 * ONE_SECOND);//这个表示等待的时间，即3s
 		if (player1.get_wait_time() == 0)
 		{
-			process_of_show(player1.get_location().first, player1.get_location().second, player1.get_bomb_rang());
+			process_of_explode(px1, py1, player1.get_bomb_rang(), 1);
+			player1.change_bomb_time(1 * ONE_SECOND);//炸弹爆炸了再显示它的光线1s			
 		}
 	}
 	if (player2.get_wait_time())
@@ -583,16 +575,17 @@ void deal_with_timer()
 		player2.change_wait_time(-1 * ONE_SECOND);
 		if (player2.get_wait_time() == 0)
 		{
-			process_of_show(player2.get_location().first, player2.get_location().second, player2.get_bomb_rang());
+			process_of_explode(px2, py2, player2.get_bomb_rang(), 2);
+			player2.change_bomb_time(1 * ONE_SECOND);			
 		}
-	}*/
+	}
 }
 int main()
 {
 	srand((unsigned)time(NULL));//随机数种子
 	init();//作为初始化地图等东西
 	map.show_MYmap();
-	int cnt = 1;
+	long long cnt = 1;
 	while (1)
 	{
 		//robot1.walk();		
