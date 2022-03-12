@@ -18,7 +18,7 @@ using namespace std;
 #define Bomb_Robot 7//嗯现在还差捡道具没做了，加把劲写！！！(设定道具有使用时间，均为7s)
 #define Bomb_player 10
 #define Game_time 540000//规定了游戏结束的时间9min
-const int ONE_SECOND = 6000;
+const int ONE_SECOND = 5000;
 enum director
 {
 	UP,
@@ -29,6 +29,7 @@ enum director
 void display();
 //
 int px1, py1, px2, py2;//这个每次储存的是player1和2当时炸弹爆炸的位置，这样爆炸的位置就不随着人的移动而移动
+int X1, Y1, X2, Y2, X3, Y3;//这个是储存机器人放炸弹时所在的位置
 class MAP
 {
 public:
@@ -275,6 +276,18 @@ void process_of_explode(int x, int y, int range, int type)
 				else if (now <= '9' && now >= '1')
 					player2.change_score(Bomb_Robot);
 			}
+			else
+			{
+				//这里是机器人放炸弹的操作
+				if (now == '@')
+				{
+					player1.change_alive(0);
+				}
+				else if (now == '+')
+				{
+					player2.change_alive(0);
+				}
+			}
 			map.change_MYmap('O', x, i);
 		}
 	}//横条
@@ -338,6 +351,18 @@ void process_of_explode(int x, int y, int range, int type)
 				else if (now <= '9' && now >= '1')
 					player2.change_score(Bomb_Robot);
 			}
+			else
+			{
+				//这里是机器人放炸弹的操作
+				if (now == '@')
+				{
+					player1.change_alive(0);
+				}
+				else if (now == '+')
+				{
+					player2.change_alive(0);
+				}
+			}
 			map.change_MYmap('O', i, y);
 		}
 	}//竖条
@@ -363,16 +388,38 @@ class ROBOT
 {
 private:
 	pair<int, int> location;//现在的位置
-	char symbol;//玩家代表的字符
+	char symbol;//机器人代表的字符
+	int wait_time = 0;
+	int bomb_time = 0;//是机器人的炸弹时间
 public:
+	int get_wait_time()
+	{
+		return this->wait_time;
+	}
+	int get_bomb_time()
+	{
+		return this->bomb_time;
+	}
+	void change_wait_time(int x)
+	{
+		this->wait_time += x;
+	}
+	void change_bomb_time(int x)
+	{
+		this->bomb_time += x;
+	}
 	void init_robot(char character);
 	pair<int, int> get_location()//获取位置
 	{
 		return this->location;
 	}
-	char get_symbol()//获取玩家的字符表示
+	char get_symbol()//获取机器人的字符表示
 	{
 		return this->symbol;
+	}
+	void change_location(int x, int y)
+	{
+		this->location.first = x, this->location.second = y;
 	}
 	void walk();
 };
@@ -436,6 +483,33 @@ void ROBOT::walk()
 			break;
 		}
 	}
+	//不使用随机数，若使用一直朝一个方向走动，顺序上左下右
+	/*int x = this->get_location().first, y = this->get_location().second;
+	if (map.get_MYmap(x - 1, y) == ' ')
+	{
+		map.change_MYmap(' ', x, y);
+		map.change_MYmap(this->symbol, x - 1, y);
+		this->change_location(x - 1, y);
+	}
+	else if (map.get_MYmap(x, y - 1) == ' ')
+	{
+		map.change_MYmap(' ', x, y);
+		map.change_MYmap(this->symbol, x, y - 1);
+		this->change_location(x, y - 1);
+	}
+	else if (map.get_MYmap(x + 1, y) == ' ')
+	{
+		map.change_MYmap(' ', x, y);
+		map.change_MYmap(this->symbol, x + 1, y);
+		this->change_location(x + 1, y);
+	}
+	else if (map.get_MYmap(x, y + 1) == ' ')
+	{
+		map.change_MYmap(' ', x, y);
+		map.change_MYmap(this->symbol, x, y + 1);
+		this->change_location(x, y + 1);
+	}
+	display();*/
 }
 void init()
 {
@@ -620,7 +694,59 @@ void deal_with_input()
 }
 void deal_with_timer()
 {
+	//...怎么会有这么多重复的复杂的代码就是说
 	//定时事件：炸弹定时3s爆炸，光束显示1s
+	if (robot1.get_bomb_time())
+	{
+		robot1.change_bomb_time(-1 * ONE_SECOND);
+		if (robot1.get_bomb_time() == 0)//说明此时要爆炸了
+		{
+			process_of_show(X1, Y1, 1);
+		}
+	}
+	if (robot2.get_bomb_time())
+	{
+		robot2.change_bomb_time(-1 * ONE_SECOND);
+		if (robot2.get_bomb_time() == 0)//说明此时要爆炸了
+		{
+			process_of_show(X2, Y2, 1);
+		}
+	}
+	if (robot3.get_bomb_time())
+	{
+		robot3.change_bomb_time(-1 * ONE_SECOND);
+		if (robot3.get_bomb_time() == 0)//说明此时要爆炸了
+		{
+			process_of_show(X3, Y3, 1);
+		}
+	}
+	if (robot1.get_wait_time())
+	{
+		robot1.change_wait_time(-1 * ONE_SECOND);
+		if (robot1.get_wait_time() == 0)
+		{
+			process_of_explode(X1, Y1, 1, 0);
+			robot1.change_bomb_time(1 * ONE_SECOND);
+		}
+	}
+	if (robot2.get_wait_time())
+	{
+		robot2.change_wait_time(-1 * ONE_SECOND);
+		if (robot2.get_wait_time() == 0)
+		{
+			process_of_explode(X2, Y2, 1, 0);
+			robot2.change_bomb_time(1 * ONE_SECOND);
+		}
+	}
+	if (robot3.get_wait_time())
+	{
+		robot3.change_wait_time(-1 * ONE_SECOND);
+		if (robot3.get_wait_time() == 0)
+		{
+			process_of_explode(X3, Y3, 1, 0);
+			robot3.change_bomb_time(1 * ONE_SECOND);
+		}
+	}
 	if (player1.get_bomb_time())
 	{
 		player1.change_bomb_time(-1 * ONE_SECOND);
@@ -699,15 +825,32 @@ int main()
 	long long end_t;
 	while (1)
 	{
-		//robot1.walk();		
-		//robot2.walk();
-		//robot3.walk();
 		deal_with_input();
 		cnt++;
-		if (cnt == ONE_SECOND)
+		if (cnt % ONE_SECOND == 0)
 		{
+
 			deal_with_timer();
-			cnt = 0;
+
+		}
+		if (cnt == 2 * ONE_SECOND)
+		{
+			robot1.walk();
+			robot2.walk();
+			robot3.walk();
+		}
+		if (cnt == 5 * ONE_SECOND)
+		{
+			cnt = 1;
+			robot1.change_wait_time(3 * ONE_SECOND);
+			X1 = robot1.get_location().first;
+			Y1 = robot1.get_location().second;
+			robot2.change_wait_time(3 * ONE_SECOND);
+			X2 = robot2.get_location().first;
+			Y2 = robot2.get_location().second;
+			robot3.change_wait_time(3 * ONE_SECOND);
+			X3 = robot3.get_location().first;
+			Y3 = robot3.get_location().second;
 		}
 		end_t = clock();
 		if (end_t - start_t == Game_time)
@@ -720,8 +863,7 @@ int main()
 			else
 				printf("棋逢对手，平局，再来一局吧!\n");
 			exit(0);
-		}
-			
+		}		
 	}
 	return 0;
 }
