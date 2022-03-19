@@ -5,6 +5,7 @@
 #include <utility>
 #include <conio.h>
 #include <windows.h>
+#include <vector>
 class MAP;
 class Player;
 class BOMB;
@@ -26,6 +27,14 @@ enum director
 	DOWN,
 	RIGHT
 };
+struct bomb//建立炸弹的机构体，使其能连放炸弹
+{
+	int x, y, range;//坐标及爆炸范围
+	int wait_time, bomb_time;
+	int type;//表示是哪一个类型的角色释放的
+};
+vector<bomb> wait_list;//当等待时间结束后，减去第一个
+vector<bomb> bomb_list;//同时在末尾新增一个，当炸弹爆炸完后，减去前一个
 void display();
 int px1, py1, px2, py2;//这个每次储存的是player1和2当时炸弹爆炸的位置，这样爆炸的位置就不随着人的移动而移动
 class MAP
@@ -101,8 +110,6 @@ class ROBOT
 private:
 	pair<int, int> location;//现在的位置
 	char symbol;//机器人代表的字符
-	int wait_time = 0;
-	int bomb_time = 0;//是机器人的炸弹时间
 	pair<int, int> bomb_location;//这个是机器人当时放炸弹的地方
 	int alive = 1;//表示是否存活
 	int flag = 0;//是1的时候表示机器人刚刚放完炸弹，然后一定要先往一个方向移动，0就是已经移开区域了
@@ -123,7 +130,7 @@ public:
 	{
 		this->bomb_location.first = x, this->bomb_location.second = y;
 	}
-	int get_wait_time()
+	/*int get_wait_time()
 	{
 		return this->wait_time;
 	}
@@ -138,7 +145,7 @@ public:
 	void change_bomb_time(int x)
 	{
 		this->bomb_time += x;
-	}
+	}*/
 	void init_robot(char character);
 	pair<int, int> get_location()//获取位置
 	{
@@ -152,7 +159,7 @@ public:
 	{
 		this->location.first = x, this->location.second = y;
 	}
-	void walk();
+	//void walk();
 	int get_alive()
 	{
 		return this->alive;
@@ -179,7 +186,7 @@ void ROBOT::init_robot(char character)
 		}
 	}
 }
-void ROBOT::walk()
+/*void ROBOT::walk()
 {
 	//利用随机数使三个机器人能够走动起来
 	char character = this->symbol;
@@ -341,7 +348,7 @@ void ROBOT::walk()
 			}
 		}
 	}
-}
+}*/
 class Player
 {
 private:
@@ -351,8 +358,6 @@ private:
 	int score = 0;//玩家得分
 	bool alive = 1;//以及判断游戏是否结束
 	int speed = 1;//玩家的行走速度
-	int wait_time = 0;//玩家炸弹的爆炸时间
-	int bomb_time = 0;//表示玩家没有投放炸弹
 	int tool1_time = 0;
 	int tool2_time = 0;
 public:
@@ -395,22 +400,6 @@ public:
 	{
 		this->speed = x;
 	}
-	int get_wait_time()
-	{
-		return this->wait_time;
-	}
-	int get_bomb_time()
-	{
-		return this->bomb_time;
-	}
-	void change_bomb_time(int x)
-	{
-		this->bomb_time += x;
-	}
-	void change_wait_time(int x)
-	{
-		this->wait_time += x;//当等待时间为0时，设置爆炸时间
-	}
 	int get_tool1_time()
 	{
 		return this->tool1_time;
@@ -435,11 +424,12 @@ void Player::init_Player(char character)
 	this->symbol = character;
 	while (1)
 	{
-		this->location.first = (rand() % row);
-		this->location.second = (rand() % col);
-		if (map.get_MYmap(this->location.first,this->location.second) == ' ')
+		int first = (rand() % row);
+		int second = (rand() % col);
+		if (map.get_MYmap(first,second) == ' ' && (map.get_MYmap(first-1,second)==' ' || map.get_MYmap(first + 1, second)==' ' || map.get_MYmap(first, second + 1)==' ' || map.get_MYmap(first, second - 1)== ' '))
 		{
-			map.change_MYmap(character, this->location.first, this->location.second);
+			map.change_MYmap(character, first, second);
+			this->location.first = first, this->location.second = second;//要留下玩家的初始位置
 			break;
 		}
 	}
@@ -679,6 +669,22 @@ void display()
 	if(player2.get_tool2_time() == 7 * ONE_SECOND)
 		printf("恭喜玩家2获得炸弹威力翻倍道具!\n");
 }
+void set_bomb1(int x, int y, int range, int type)
+{//用来释放炸弹的
+	bomb temp;
+	temp.x = x, temp.y = y;
+	temp.wait_time = 3;
+	temp.type = type, temp.range = range;
+	wait_list.push_back(temp);//就算是在队尾加入一个新炸弹了
+}
+void set_bomb2(int x, int y, int range)
+{//用来显示炸弹的
+	bomb temp;
+	temp.x = x, temp.y = y;
+	temp.bomb_time = 1;
+	temp.range = range;
+	bomb_list.push_back(temp);
+}
 void deal_with_input()
 {
 	//感动感动终于把这里改好了，下次写switch一定记得有break！！！
@@ -799,12 +805,10 @@ void deal_with_input()
 			break;
 		case ' ':
 			//此时释放了炸弹，然后过3000ms才会爆炸，设定了炸弹爆炸的时间
-			player1.change_wait_time(3 * ONE_SECOND);
-			px1 = Px1, py1 = Py1;
+		    set_bomb1(player1.get_location().first, player1.get_location().second, player1.get_bomb_range(), 1);
 			break;
 		case 13:
-			player2.change_wait_time(3 * ONE_SECOND);
-			px2 = Px2, py2 = Py2;
+			set_bomb1(player2.get_location().first, player2.get_location().second, player2.get_bomb_range(), 2);
 			break;
 		default:
 			break;
@@ -816,7 +820,32 @@ void deal_with_timer()
 	//...怎么会有这么多重复的复杂的代码就是说
 	//定时事件：炸弹定时3s爆炸，光束显示1s
 	//printf("机器人的爆炸时间为%d,炸弹等待时间为%d\n", robot1.get_bomb_time(), robot1.get_wait_time());
-	if (robot1.get_bomb_time())
+	for (int i = 0; i < bomb_list.size(); i++)
+	{
+		bomb_list[i].bomb_time--;
+		if (bomb_list[i].bomb_time == 0)
+		{
+			//说明这个时候已经显示完成
+			process_of_show(bomb_list[i].x, bomb_list[i].y, bomb_list[i].range);
+			bomb_list.erase(bomb_list.begin());
+		}
+	}
+	for (int i = 0; i < wait_list.size(); i++)
+	{
+		//开始遍历，完成的任务是将所有爆炸的等待时间--
+		wait_list[i].wait_time--;
+		if (wait_list[i].wait_time == 0)
+		{
+			//说明要将其加入显示队列
+			int x = wait_list[i].x, y = wait_list[i].y;
+			int range = wait_list[i].range, type = wait_list[i].type;
+			process_of_explode(x, y, range, type);
+			set_bomb2(x, y, range);
+			//并且将其移出爆炸等待时间的队伍中,自动向前移动一位
+			wait_list.erase(wait_list.begin());
+		}
+	}
+	/*if (robot1.get_bomb_time())
 	{
 		robot1.change_bomb_time(-1 * ONE_SECOND);
 		if (robot1.get_bomb_time() == 0)//说明此时要爆炸了
@@ -935,7 +964,7 @@ void deal_with_timer()
 		{
 			player2.change_bomb_range(1);
 		}
-	}
+	}*/
 }
 int main()
 {
@@ -946,13 +975,12 @@ int main()
 	while (1)
 	{
 		deal_with_input();
-		cnt++;
-		if (cnt == ONE_SECOND)
+		if ((clock()-start_t) / 1000 > cnt)//精准计时
 		{
 			deal_with_timer();
-			cnt = 0;
+			cnt ++;
 			//要先判断机器人是否还存在，若不存在，就不能让他继续走
-			if (robot1.get_alive())
+			/*if (robot1.get_alive())
 				robot1.walk();//所以是walk写的有问题。。。真的找了好久，太绝望了
 			if (robot2.get_alive())
 				robot2.walk();
@@ -979,7 +1007,7 @@ int main()
 				robot3.change_flag(1);
 				robot3.change_bomb_location(robot3.get_location().first, robot3.get_location().second);
 				robot3.change_wait_time(3 * ONE_SECOND);
-			}
+			}*/
 		}
 		end_t = clock();
 		if (end_t - start_t == Game_time)
