@@ -177,42 +177,42 @@ void ROBOT::walk()
 {
 	//利用随机数使三个机器人能够走动起来
 	int x = this->location.first, y = this->location.second;
+	//有一种可能就是机器人没有地方可走，只能等炸弹炸完才能走，即等process_of_show完了以后才能走
+	//此时就直接return不走，等到deal_with_timer处理完这个炸弹后再走
 	map.change_MYmap(' ', x, y);
 	//先判断是否会走到炸弹的范围里面
-	while (1)
+	if (map.get_MYmap(x - 1, y) == ' ' && judge_in(x - 1, y))
 	{
-		if (map.get_MYmap(x - 1, y) == ' ' && judge_in(x - 1, y))
-		{
-			//分为两种情况，一种是没有炸弹，所以只要能走，机器人就会走
-			//第二种是有炸弹要判断是否会走到机器人所在的范围
-			this->location.first--, x--;
-			map.change_MYmap(symbol, x, y);
-			display();
-			return;
-		}
-		else if (map.get_MYmap(x + 1, y) == ' ' && judge_in(x + 1, y))
-		{
-			this->location.first++, x++;
-			map.change_MYmap(symbol, x, y);
-			display();
-			return;
-		}
-		else if (map.get_MYmap(x, y - 1) == ' ' && judge_in(x, y - 1))
-		{
-			this->location.second--, y--;
-			map.change_MYmap(symbol, x, y);
-			display();
-			return;
-
-		}
-		else if (map.get_MYmap(x, y + 1) == ' ' && judge_in(x, y + 1))
-		{
-			this->location.second++, y++;
-			map.change_MYmap(symbol, x, y);
-			display();
-			return;
-		}
+		//分为两种情况，一种是没有炸弹，所以只要能走，机器人就会走
+		//第二种是有炸弹要判断是否会走到机器人所在的范围
+		this->location.first--, x--;
+		map.change_MYmap(symbol, x, y);
+		display();
+		return;
 	}
+	else if (map.get_MYmap(x, y + 1) == ' ' && judge_in(x, y + 1))
+	{
+		this->location.second++, y++;
+		map.change_MYmap(symbol, x, y);
+		display();
+		return;
+	}
+	else if (map.get_MYmap(x + 1, y) == ' ' && judge_in(x + 1, y))
+	{
+		this->location.first++, x++;
+		map.change_MYmap(symbol, x, y);
+		display();
+		return;
+	}
+	else if (map.get_MYmap(x, y - 1) == ' ' && judge_in(x, y - 1))
+	{
+		this->location.second--, y--;
+		map.change_MYmap(symbol, x, y);
+		display();
+		return;
+	}
+	else
+		return;
 }
 void ROBOT::judge(int idx)
 {
@@ -224,26 +224,22 @@ void ROBOT::judge(int idx)
 	if (con1 || con2 || con3 || con4)
 	{
 		this->flag = -idx;//分别赋值为-1，-2，-3
-		printf("机器人%d释放炸弹，小心！\n", idx);
 		this->bomb_location.first = x, this->bomb_location.second = y;
 		set_bomb1(x, y, 1, this->flag);
 		if (con1)
 		{
-			//cout << "con1" << endl;
 			map.change_MYmap(' ', x, y);
 			map.change_MYmap(symbol, x - 1, y);
 			this->location.first--;
 		}
 		else if (con2)
 		{
-			//cout << "con2" << endl;
 			map.change_MYmap(' ', x, y);
 			map.change_MYmap(symbol, x + 1, y);
 			this->location.first++;
 		}
 		else if (con3)
 		{
-			//cout << "con3" << endl;
 			map.change_MYmap(' ', x, y);
 			map.change_MYmap(symbol, x, y - 1);
 			this->location.second--;
@@ -568,12 +564,19 @@ void process_of_show(int x, int y, int range, int type)
 	}
 	if (type == -1)
 	{
+		robot1.change_bomb_location(0,0);
 		robot1.change_flag(0);
 	}		
 	if (type == -2)
+	{
+		robot2.change_bomb_location(0, 0);
 		robot2.change_flag(0);
+	}
 	if (type == -3)
+	{
+		robot3.change_bomb_location(0, 0);
 		robot3.change_flag(0);//说明炸弹放完了可以复原了，即能继续放炸弹了
+	}	
 	display();
 }
 void init()
@@ -852,12 +855,15 @@ int main()
 			deal_with_timer();
 			cnt++;
 			//要先判断机器人是否还存在，若不存在，就不能让他继续走
-			if (robot1.get_alive())
-				robot1.walk();
-			if (robot2.get_alive())
-				robot2.walk();
-			if (robot3.get_alive())
-				robot3.walk();
+			if (cnt % 2 == 0)
+			{
+				if (robot1.get_alive())
+					robot1.walk();
+				if (robot2.get_alive())
+					robot2.walk();
+				if (robot3.get_alive())
+					robot3.walk();
+			}
 			int random2 = rand() % 7;
 			if (random2 == 1 && robot1.get_alive() && robot1.get_flag() == 0)
 				robot1.judge(1);
